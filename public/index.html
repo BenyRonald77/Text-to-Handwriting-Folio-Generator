@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Folio Generator — Teks ke Tulisan Tangan</title>
+  <meta name="description" content="Ubah teks menjadi tulisan tangan di kertas folio bergaris">
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #FAF7F2;
+      --surface: #FFFFFF;
+      --border: #E5DDD3;
+      --text: #2C2A26;
+      --text-muted: #8A857C;
+      --accent: #3D6B5E;
+      --accent-hover: #2F5549;
+      --error-bg: #FFF0EE;
+      --error-text: #A3342A;
+      --radius: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    body {
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+
+    /* ── Header ── */
+    header {
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Input section ── */
+    .input-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .input-section label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    #text-input {
+      width: 100%;
+      min-height: 180px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #text-input:focus {
+      border-color: var(--accent);
+    }
+
+    #text-input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    .input-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .input-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    #char-count {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    #char-count.over-limit {
+      color: var(--error-text);
+      font-weight: 600;
+    }
+
+    .debug-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+    }
+
+    .debug-toggle:hover {
+      color: var(--text);
+    }
+
+    .debug-toggle input {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    #btn-generate {
+      padding: 10px 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    #btn-generate:hover {
+      background: var(--accent-hover);
+    }
+
+    #btn-generate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── Error message ── */
+    #error-msg {
+      display: none;
+      background: var(--error-bg);
+      color: var(--error-text);
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+
+    #error-msg.visible {
+      display: block;
+    }
+
+    /* ── Loading ── */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 40px 0;
+      margin-top: 24px;
+    }
+
+    #loading.visible {
+      display: block;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loading p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Results ── */
+    #results {
+      display: none;
+      margin-top: 28px;
+    }
+
+    #results.visible {
+      display: block;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .results-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .results-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .results-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      padding: 7px 16px;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-action:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      padding: 7px 14px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    /* ── Variation tabs (Debug mode) ── */
+    .variation-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .variation-bar.visible {
+      display: flex;
+    }
+
+    .variation-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .variation-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 5px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 2px);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* ── Page cards ── */
+    .page-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .page-card img {
+      width: 100%;
+      display: block;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+    }
+
+    .page-card-footer span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .btn-download-page {
+      padding: 5px 14px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-download-page:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 540px) {
+      .app { padding: 24px 16px 40px; }
+      header h1 { font-size: 1.15rem; }
+      #text-input { min-height: 140px; font-size: 0.9rem; }
+      .input-footer { flex-direction: column; gap: 12px; align-items: stretch; }
+      #btn-generate { text-align: center; }
+      .results-header { flex-direction: column; gap: 10px; }
+      .results-actions { width: 100%; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Folio Generator</h1>
+      <p>Ketik atau tempel teks, lalu generate menjadi tulisan tangan di kertas folio.</p>
+    </header>
+
+    <section class="input-section">
+      <label for="text-input">Teks</label>
+      <textarea
+        id="text-input"
+        placeholder="Tulis atau tempel teks di sini..."
+        maxlength="10000"
+      ></textarea>
+      <div class="input-footer">
+        <div class="input-controls">
+          <span id="char-count">0 / 10.000</span>
+          <label class="debug-toggle" title="Generate 4 variasi hasil sekaligus untuk membandingkan efek perubahan parameter">
+            <input type="checkbox" id="debug-check">
+            <span>Mode debug (4 variasi)</span>
+          </label>
+        </div>
+        <button id="btn-generate" type="button">Generate</button>
+      </div>
+    </section>
+
+    <div id="error-msg"></div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <p id="loading-text">Menulis di kertas folio…</p>
+    </div>
+
+    <section id="results">
+      <div class="results-header">
+        <div>
+          <h2 id="results-title">Hasil</h2>
+          <p id="results-subtitle" class="results-subtitle"></p>
+        </div>
+        <div class="results-actions">
+          <button id="btn-download-all" class="btn-action" type="button">Download halaman</button>
+          <button id="btn-download-all-variations" class="btn-secondary" type="button" style="display: none;">Download semua variasi</button>
+        </div>
+      </div>
+
+      <div id="variation-bar" class="variation-bar">
+        <span class="variation-label">Variasi acak:</span>
+        <div id="variation-tabs" class="variation-tabs"></div>
+      </div>
+
+      <div id="pages-container"></div>
+    </section>
+  </div>
+
+  <script>
+    const MAX = 10000;
+    const textarea = document.getElementById('text-input');
+    const charCount = document.getElementById('char-count');
+    const debugCheck = document.getElementById('debug-check');
+    const btnGenerate = document.getElementById('btn-generate');
+    const errorMsg = document.getElementById('error-msg');
+    const loading = document.getElementById('loading');
+    const loadingText = document.getElementById('loading-text');
+    const results = document.getElementById('results');
+    const resultsTitle = document.getElementById('results-title');
+    const resultsSubtitle = document.getElementById('results-subtitle');
+    const variationBar = document.getElementById('variation-bar');
+    const variationTabs = document.getElementById('variation-tabs');
+    const pagesContainer = document.getElementById('pages-container');
+    const btnDownloadAll = document.getElementById('btn-download-all');
+    const btnDownloadAllVariations = document.getElementById('btn-download-all-variations');
+
+    // State
+    let currentVariations = [];
+    let activeVariationIndex = 0;
+    let activeImages = [];
+
+    // Pre-check debug checkbox if ?debug=true in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === 'true' || urlParams.get('debug') === '1') {
+      debugCheck.checked = true;
+    }
+
+    // ── Character count ──
+    textarea.addEventListener('input', () => {
+      const len = textarea.value.length;
+      charCount.textContent = `${len.toLocaleString('id')} / ${MAX.toLocaleString('id')}`;
+      charCount.classList.toggle('over-limit', len > MAX);
+    });
+
+    // ── Generate ──
+    btnGenerate.addEventListener('click', async () => {
+      const text = textarea.value.trim();
+
+      // Client-side validation
+      if (!text) {
+        showError('Teks tidak boleh kosong.');
+        return;
+      }
+      if (text.length > MAX) {
+        showError(`Teks melebihi batas maksimum ${MAX.toLocaleString('id')} karakter.`);
+        return;
+      }
+
+      hideError();
+      hideResults();
+
+      const isDebug = debugCheck.checked;
+      loadingText.textContent = isDebug
+        ? 'Men-generate 4 variasi tulisan tangan…'
+        : 'Menulis di kertas folio…';
+      showLoading();
+      btnGenerate.disabled = true;
+
+      try {
+        const endpoint = isDebug ? '/api/generate?debug=true' : '/api/generate';
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, debug: isDebug }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || `Server error (${res.status})`);
+        }
+
+        handleResponse(data);
+      } catch (err) {
+        showError(err.message || 'Gagal terhubung ke server.');
+      } finally {
+        hideLoading();
+        btnGenerate.disabled = false;
+      }
+    });
+
+    // ── Process response ──
+    function handleResponse(data) {
+      if (data.isDebug && Array.isArray(data.variations) && data.variations.length > 1) {
+        currentVariations = data.variations;
+        activeVariationIndex = 0;
+        setupVariationTabs(data.variations);
+        btnDownloadAllVariations.style.display = 'inline-block';
+        resultsSubtitle.textContent = 'Mode debug aktif. Klik variasi di bawah untuk membandingkan perbedaan jitter per karakter.';
+        displayVariation(0);
+      } else {
+        currentVariations = [{ variation: 1, images: data.images }];
+        activeVariationIndex = 0;
+        variationBar.classList.remove('visible');
+        btnDownloadAllVariations.style.display = 'none';
+        resultsSubtitle.textContent = '';
+        displayVariation(0);
+      }
+      showResults();
+    }
+
+    // ── Setup debug variation tabs ──
+    function setupVariationTabs(variations) {
+      variationTabs.innerHTML = '';
+      variations.forEach((v, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (idx === 0 ? ' active' : '');
+        btn.textContent = `Variasi ${v.variation || idx + 1}`;
+        btn.type = 'button';
+        btn.addEventListener('click', () => displayVariation(idx));
+        variationTabs.appendChild(btn);
+      });
+      variationBar.classList.add('visible');
+    }
+
+    // ── Display specific variation ──
+    function displayVariation(index) {
+      activeVariationIndex = index;
+      const variation = currentVariations[index];
+      if (!variation) return;
+
+      activeImages = variation.images || [];
+
+      // Update tab styles
+      const tabs = variationTabs.querySelectorAll('.tab-btn');
+      tabs.forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+      });
+
+      // Update header title
+      const varLabel = currentVariations.length > 1 ? ` (Variasi ${index + 1})` : '';
+      resultsTitle.textContent = `Hasil — ${activeImages.length} halaman${varLabel}`;
+      btnDownloadAll.textContent = currentVariations.length > 1
+        ? `Download Variasi ${index + 1}`
+        : 'Download semua';
+
+      // Render cards
+      pagesContainer.innerHTML = '';
+      activeImages.forEach((src, i) => {
+        const card = document.createElement('div');
+        card.className = 'page-card';
+
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = `Halaman ${i + 1}`;
+        img.loading = 'lazy';
+
+        const footer = document.createElement('div');
+        footer.className = 'page-card-footer';
+
+        const label = document.createElement('span');
+        label.textContent = `Halaman ${i + 1}${varLabel}`;
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-download-page';
+        btn.textContent = 'Download';
+        const filename = currentVariations.length > 1
+          ? `folio-v${index + 1}-halaman-${i + 1}.jpg`
+          : `folio-halaman-${i + 1}.jpg`;
+        btn.addEventListener('click', () => downloadImage(src, filename));
+
+        footer.appendChild(label);
+        footer.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(footer);
+        pagesContainer.appendChild(card);
+      });
+    }
+
+    // ── Download helpers ──
+    function downloadImage(dataUrl, filename) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Download current active variation
+    btnDownloadAll.addEventListener('click', () => {
+      const varPrefix = currentVariations.length > 1 ? `-v${activeVariationIndex + 1}` : '';
+      activeImages.forEach((src, i) => {
+        setTimeout(() => {
+          downloadImage(src, `folio${varPrefix}-halaman-${i + 1}.jpg`);
+        }, i * 300);
+      });
+    });
+
+    // Download all variations (debug mode)
+    btnDownloadAllVariations.addEventListener('click', () => {
+      let delay = 0;
+      currentVariations.forEach((v, vIdx) => {
+        v.images.forEach((src, pIdx) => {
+          setTimeout(() => {
+            downloadImage(src, `folio-v${vIdx + 1}-halaman-${pIdx + 1}.jpg`);
+          }, delay);
+          delay += 300;
+        });
+      });
+    });
+
+    // ── UI state helpers ──
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('visible');
+    }
+    function hideError() {
+      errorMsg.classList.remove('visible');
+    }
+    function showLoading() {
+      loading.classList.add('visible');
+    }
+    function hideLoading() {
+      loading.classList.remove('visible');
+    }
+    function showResults() {
+      results.classList.add('visible');
+    }
+    function hideResults() {
+      results.classList.remove('visible');
+    }
+
+    // ── Keyboard shortcuts ──
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        btnGenerate.click();
+      }
+    });
+
+    // Arrow keys to navigate variations in debug mode
+    window.addEventListener('keydown', (e) => {
+      if (currentVariations.length > 1 && document.activeElement !== textarea) {
+        if (e.key === 'ArrowRight') {
+          const next = (activeVariationIndex + 1) % currentVariations.length;
+          displayVariation(next);
+        } else if (e.key === 'ArrowLeft') {
+          const prev = (activeVariationIndex - 1 + currentVariations.length) % currentVariations.length;
+          displayVariation(prev);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
