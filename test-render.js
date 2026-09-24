@@ -21,6 +21,7 @@ require('./src/fonts');
 const fs = require('fs');
 const path = require('path');
 const { generateHandwritingPages } = require('./src/render/folio');
+const { preloadPaper } = require('./src/render/background');
 const { DEBUG, JITTER, HANDWRITING_FONTS } = require('./src/render/config');
 
 const OUT_DIR = path.join(__dirname, 'output-test');
@@ -151,7 +152,8 @@ function runFonts() {
 
 // ── Main ──
 
-function run() {
+async function run() {
+  await preloadPaper();
   ensureDir(OUT_DIR);
   clearJpgs(OUT_DIR);
 

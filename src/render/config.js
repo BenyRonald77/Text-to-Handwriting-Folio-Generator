@@ -2,49 +2,78 @@
  * Folio paper configuration.
  * F4 (215mm × 330mm) rendered at 150 DPI.
  *
- * All measurements derived from real Indonesian folio bergaris:
- * - ~8mm line spacing (≈ 47px at 150 DPI, tuned to 44px)
- * - Red vertical margin ~25mm from left edge
- * - ~40 ruled lines per page
+ * Geometry is measured from a CamScanner scan of a real SiDU folio
+ * ("cam scanner folio.pdf", 2668×4012px) and cross-checked with the
+ * "Folio 1.png" template — both give the same proportions:
+ * - Double header line with a ruler (dot / tick every ~1cm) between them
+ * - 38 ruled lines, ~7.1mm apart, running edge to edge
+ * - Single footer line with the same ruler marks above it
+ * - Grey "SiDU" logo bottom-left, below the footer line
+ *
+ * Y positions are scan fractions × page height, so they stay correct
+ * if the canvas size changes.
  */
 
 // mm → px at 150 DPI
 const mm = (v) => Math.round(v / 25.4 * 150);
 
+const WIDTH  = mm(215);   // 1270
+const HEIGHT = mm(330);   // 1949
+
+// Scan coordinate → canvas coordinate
+const SCAN_W = 2668;
+const SCAN_H = 4012;
+const sx = (v) => v / SCAN_W * WIDTH;
+const sy = (v) => v / SCAN_H * HEIGHT;
+
 const FOLIO = Object.freeze({
   // Canvas size
-  WIDTH:  mm(215),   // 1270
-  HEIGHT: mm(330),   // 1949
+  WIDTH,
+  HEIGHT,
 
-  // Background — real SiDU folio has a warm pinkish-cream tone
-  BG_COLOR: '#F5EDE0',
+  // Paper — near-white, as it comes out of CamScanner
+  BG_COLOR: '#FCFBFB',
 
-  // Ruled lines (horizontal) — dark grey, thin, closely spaced
-  LINE_SPACING: 36,      // px between lines (~6mm, matching real folio)
-  LINE_COLOR:   '#B0A898', // warm dark grey (matches SiDU paper)
-  LINE_WIDTH:   0.5,
+  // Ruled lines (horizontal) — dark, crisp, edge to edge
+  FIRST_LINE_Y: sy(448),                    // ≈ 217.6
+  LINE_SPACING: sy((3708 - 448) / 37),      // ≈ 42.8 (~7.1mm)
+  LINE_COUNT:   38,
+  LINE_COLOR:   '#2F2B29',
+  LINE_WIDTH:   2.6,
 
-  // Header line — the thicker line at the top of the page
-  HEADER_LINE_Y:     80,
-  HEADER_LINE_COLOR: '#9A9080',
-  HEADER_LINE_WIDTH: 1.0,
+  // Header: two lines with ruler marks hanging from the upper one
+  HEADER_LINE_Y:     sy(332),               // ≈ 161.3
+  HEADER_LINE2_Y:    sy(360),               // ≈ 174.9
+  // Footer: one line with ruler marks standing on it
+  FOOTER_LINE_Y:     sy(3801),              // ≈ 1846.5
+  BORDER_LINE_COLOR: '#5A5653',             // header/footer print is a bit greyer
+  BORDER_LINE_WIDTH: 3.0,
+
+  // Ruler marks on header/footer: alternating dot and short tick
+  RULER_START_X:  sx(43),                   // first mark is a dot
+  RULER_SPACING:  sx(125.6),                // ≈ 59.8 (~1cm)
+  RULER_DOT_R:    1.7,
+  RULER_TICK_LEN: 5.5,
+  RULER_TICK_W:   1.4,
+  RULER_COLOR:    '#3A3634',
+
+  // SiDU logo — cut from the scan (src/assets/images/sidu-logo.png)
+  SIDU_X:       sx(204),
+  SIDU_Y:       sy(3859),                   // top edge of the logo image
+  SIDU_SCALE:   WIDTH / SCAN_W,             // logo PNG is at scan resolution
+  SIDU_OPACITY: 0.9,
+
+  // Scanner dust: a few tiny specks scattered on the page (0 = off)
+  SPECK_COUNT:  28,
+  SPECK_COLOR:  '#4A4644',
 
   // Writing area (full width, no vertical margin line)
-  MARGIN_TOP:    116,     // first ruled line — matches real folio top spacing
-  MARGIN_BOTTOM: 120,     // extra bottom space for SiDU branding
   WRITE_X:       mm(10),     // ~10mm left padding
   WRITE_END_X:   mm(215) - mm(10), // ~10mm right padding
 
-  // SiDU branding (bottom-left corner)
-  SIDU_TEXT:       'SiDU',
-  SIDU_FONT_SIZE:  30,       // larger, matching real paper
-  SIDU_COLOR:      '#A8A090', // muted warm grey, like printed watermark
-  SIDU_X:          mm(8),
-  SIDU_Y:          1928,
-
   // Handwriting — default font (see HANDWRITING_FONTS for the full set)
   FONT_FAMILY: 'Kalam',
-  FONT_SIZE:   22,       // slightly smaller to fit tighter line spacing
+  FONT_SIZE:   26,
   INK_COLOR:   '#13131f',
 
   // Output
@@ -54,11 +83,7 @@ const FOLIO = Object.freeze({
 // Derived layout values
 const LAYOUT = Object.freeze({
   WRITE_WIDTH:    FOLIO.WRITE_END_X - FOLIO.WRITE_X,
-  FIRST_LINE_Y:   FOLIO.MARGIN_TOP,
-  LAST_LINE_Y:    FOLIO.HEIGHT - FOLIO.MARGIN_BOTTOM,
-  LINES_PER_PAGE: Math.floor(
-    (FOLIO.HEIGHT - FOLIO.MARGIN_BOTTOM - FOLIO.MARGIN_TOP) / FOLIO.LINE_SPACING
-  ),
+  LINES_PER_PAGE: FOLIO.LINE_COUNT,
 });
 
 /**
@@ -66,15 +91,15 @@ const LAYOUT = Object.freeze({
  *
  * Each font has its own size because the fonts have very different
  * x-heights: Caveat at 22px looks tiny next to Kalam at 22px. Tune SIZE
- * so every font looks roughly the same size on the 36px ruled lines.
+ * so every font looks roughly the same size on the ~43px ruled lines.
  *
  * FILES are loaded from src/assets/fonts/ by src/fonts.js.
  */
 const HANDWRITING_FONTS = Object.freeze([
-  { ID: 'kalam',        FAMILY: 'Kalam',        SIZE: 22, FILES: ['Kalam-Regular.ttf', 'Kalam-Bold.ttf'] },
-  { ID: 'caveat',       FAMILY: 'Caveat',       SIZE: 28, FILES: ['Caveat-Variable.ttf'] },
-  { ID: 'patrick-hand', FAMILY: 'Patrick Hand', SIZE: 26, FILES: ['PatrickHand-Regular.ttf'] },
-  { ID: 'gochi-hand',   FAMILY: 'Gochi Hand',   SIZE: 24, FILES: ['GochiHand-Regular.ttf'] },
+  { ID: 'kalam',        FAMILY: 'Kalam',        SIZE: 26, FILES: ['Kalam-Regular.ttf', 'Kalam-Bold.ttf'] },
+  { ID: 'caveat',       FAMILY: 'Caveat',       SIZE: 33, FILES: ['Caveat-Variable.ttf'] },
+  { ID: 'patrick-hand', FAMILY: 'Patrick Hand', SIZE: 31, FILES: ['PatrickHand-Regular.ttf'] },
+  { ID: 'gochi-hand',   FAMILY: 'Gochi Hand',   SIZE: 28, FILES: ['GochiHand-Regular.ttf'] },
 ]);
 
 /**

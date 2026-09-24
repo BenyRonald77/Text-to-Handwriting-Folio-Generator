@@ -73,7 +73,8 @@ app.get('/api/fonts', (_req, res) => {
 app.use('/api/generate', generateLimiter, require('./routes/generate'));
 
 // --- Start ---
-app.listen(PORT, HOST, () => {
+// Render the static folio paper (incl. SiDU logo) before taking requests.
+require('./render/background').preloadPaper().then(() => app.listen(PORT, HOST, () => {
   console.log(`✦ Handwriting Folio server running on http://localhost:${PORT}`);
   console.log(`  Health check: http://localhost:${PORT}/api/health`);
-});
+}));
