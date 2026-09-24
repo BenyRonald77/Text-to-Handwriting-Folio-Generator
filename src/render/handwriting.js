@@ -49,7 +49,7 @@ function renderHandwrittenLine(ctx, line, startX, baselineY, opts = {}) {
   const lineYShift = jit(JITTER.LINE_Y_OFFSET_PX);
 
   // Set base font for measurements
-  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.font = `${fontSize}px "${fontFamily}"`;
   ctx.textBaseline = 'alphabetic';
 
   let cursorX = startX;
@@ -84,7 +84,7 @@ function renderHandwrittenLine(ctx, line, startX, baselineY, opts = {}) {
     ctx.globalAlpha = alpha;
 
     // Reset font in case scale changed effective size
-    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.font = `${fontSize}px "${fontFamily}"`;
 
     // Draw character at the transformed origin
     ctx.fillText(ch, 0, 0);
@@ -118,7 +118,7 @@ function renderPageText(ctx, lines, lineYs, opts = {}) {
  */
 function drawPageNumber(ctx, pageNum, totalPages) {
   ctx.save();
-  ctx.font = `${PAGE_NUMBER.FONT_SIZE}px ${FOLIO.FONT_FAMILY}`;
+  ctx.font = `${PAGE_NUMBER.FONT_SIZE}px "${FOLIO.FONT_FAMILY}"`;
   ctx.fillStyle = PAGE_NUMBER.COLOR;
   ctx.globalAlpha = PAGE_NUMBER.OPACITY;
   ctx.textBaseline = 'alphabetic';

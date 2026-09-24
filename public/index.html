@@ -126,6 +126,24 @@
       font-weight: 600;
     }
 
+    .font-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .font-picker select {
+      font: inherit;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+
     .debug-toggle {
       display: inline-flex;
       align-items: center;
@@ -414,6 +432,12 @@
       <div class="input-footer">
         <div class="input-controls">
           <span id="char-count">0 / 10.000</span>
+          <label class="font-picker">
+            <span>Font</span>
+            <select id="font-select">
+              <option value="random">Acak</option>
+            </select>
+          </label>
           <label class="debug-toggle" title="Generate 4 variasi hasil sekaligus untuk membandingkan efek perubahan parameter">
             <input type="checkbox" id="debug-check">
             <span>Mode debug (4 variasi)</span>
@@ -456,6 +480,7 @@
     const textarea = document.getElementById('text-input');
     const charCount = document.getElementById('char-count');
     const debugCheck = document.getElementById('debug-check');
+    const fontSelect = document.getElementById('font-select');
     const btnGenerate = document.getElementById('btn-generate');
     const errorMsg = document.getElementById('error-msg');
     const loading = document.getElementById('loading');
@@ -479,6 +504,19 @@
     if (urlParams.get('debug') === 'true' || urlParams.get('debug') === '1') {
       debugCheck.checked = true;
     }
+
+    // ── Font list ──
+    fetch('/api/fonts')
+      .then((r) => (r.ok ? r.json() : { fonts: [] }))
+      .then(({ fonts }) => {
+        for (const f of fonts) {
+          const opt = document.createElement('option');
+          opt.value = f.id;
+          opt.textContent = f.name;
+          fontSelect.appendChild(opt);
+        }
+      })
+      .catch(() => { /* keep "Acak" only */ });
 
     // ── Character count ──
     textarea.addEventListener('input', () => {
@@ -516,7 +554,7 @@
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, debug: isDebug }),
+          body: JSON.stringify({ text, font: fontSelect.value, debug: isDebug }),
         });
 
         const data = await res.json();
@@ -560,7 +598,7 @@
       variations.forEach((v, idx) => {
         const btn = document.createElement('button');
         btn.className = 'tab-btn' + (idx === 0 ? ' active' : '');
-        btn.textContent = `Variasi ${v.variation || idx + 1}`;
+        btn.textContent = `Variasi ${v.variation || idx + 1}` + (v.font ? ` · ${v.font}` : '');
         btn.type = 'button';
         btn.addEventListener('click', () => displayVariation(idx));
         variationTabs.appendChild(btn);

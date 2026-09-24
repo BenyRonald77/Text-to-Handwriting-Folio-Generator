@@ -5,6 +5,10 @@
  *   node test-render.js
  *   → Generates short/medium/long samples in /output-test/
  *
+ * Font comparison (for tuning per-font SIZE in HANDWRITING_FONTS):
+ *   node test-render.js --fonts
+ *   → Renders the medium sample once with every font
+ *
  * Debug mode (for tuning JITTER parameters):
  *   node test-render.js --debug
  *   or: DEBUG=true node test-render.js
@@ -17,7 +21,7 @@ require('./src/fonts');
 const fs = require('fs');
 const path = require('path');
 const { generateHandwritingPages } = require('./src/render/folio');
-const { DEBUG, JITTER } = require('./src/render/config');
+const { DEBUG, JITTER, HANDWRITING_FONTS } = require('./src/render/config');
 
 const OUT_DIR = path.join(__dirname, 'output-test');
 
@@ -84,11 +88,11 @@ function runNormal() {
 
   for (const test of tests) {
     const t0 = Date.now();
-    const buffers = generateHandwritingPages(test.text);
+    const { font, buffers } = generateHandwritingPages(test.text);
     const elapsed = Date.now() - t0;
 
     console.log(
-      `[${test.name}] ${test.text.length} chars → ${buffers.length} page(s) — ${elapsed}ms`
+      `[${test.name}] ${test.text.length} chars → ${buffers.length} page(s) [${font}] — ${elapsed}ms`
     );
     saveBuffers(buffers, test.name, OUT_DIR);
     console.log();
@@ -117,15 +121,32 @@ function runDebug() {
 
   for (let v = 1; v <= count; v++) {
     const t0 = Date.now();
-    const buffers = generateHandwritingPages(debugText);
+    const { font, buffers } = generateHandwritingPages(debugText);
     const elapsed = Date.now() - t0;
 
-    console.log(`[variation ${v}/${count}] — ${elapsed}ms`);
+    console.log(`[variation ${v}/${count}] [${font}] — ${elapsed}ms`);
     saveBuffers(buffers, `debug-v${v}`, OUT_DIR);
   }
 
   console.log(`\nCompare the ${count} variations in: ${OUT_DIR}`);
   console.log('Tweak values in src/render/config.js → JITTER, then re-run.\n');
+}
+
+// ── Font comparison: same text, every font ──
+
+function runFonts() {
+  console.log('=== FONT COMPARISON ===\n');
+
+  for (const f of HANDWRITING_FONTS) {
+    const t0 = Date.now();
+    const { buffers } = generateHandwritingPages(MEDIUM_TEXT, { font: f.ID });
+    const elapsed = Date.now() - t0;
+
+    console.log(`[${f.ID}] ${f.SIZE}px — ${elapsed}ms`);
+    saveBuffers(buffers, `font-${f.ID}`, OUT_DIR);
+  }
+
+  console.log('\nTweak SIZE in src/render/config.js → HANDWRITING_FONTS, then re-run.\n');
 }
 
 // ── Main ──
@@ -134,7 +155,9 @@ function run() {
   ensureDir(OUT_DIR);
   clearJpgs(OUT_DIR);
 
-  if (DEBUG.ENABLED) {
+  if (process.argv.includes('--fonts')) {
+    runFonts();
+  } else if (DEBUG.ENABLED) {
     runDebug();
   } else {
     runNormal();

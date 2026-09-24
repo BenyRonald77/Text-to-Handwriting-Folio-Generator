@@ -1,16 +1,48 @@
-// Register fonts FIRST — before any canvas usage anywhere.
+const path = require('path');
+
+// Load environment variables FIRST — config.js reads process.env at load time.
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+// Register fonts before any canvas usage anywhere.
 require('./fonts');
 
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-
-// Load environment variables
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { createBasicAuth } = require('./middleware/basic-auth');
+const { HANDWRITING_FONTS } = require('./render/config');
 
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Behind Nginx the client IP arrives in X-Forwarded-For. Without this,
+// every request looks like it comes from 127.0.0.1 and the rate limiter
+// would throttle all users together. Set TRUST_PROXY=1 when behind one proxy.
+if (process.env.TRUST_PROXY) {
+  const tp = process.env.TRUST_PROXY;
+  app.set('trust proxy', /^\d+$/.test(tp) ? parseInt(tp, 10) : tp === 'true');
+}
+
+// --- Health check (before auth, so uptime monitors / PM2 checks work) ---
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// --- Access protection (PRD §7) ---
+if (process.env.BASIC_AUTH_PASS) {
+  app.use(createBasicAuth({
+    user: process.env.BASIC_AUTH_USER || 'teman',
+    pass: process.env.BASIC_AUTH_PASS,
+  }));
+  console.log('  Basic auth: enabled');
+} else {
+  console.log('  Basic auth: disabled (set BASIC_AUTH_PASS to enable)');
+}
 
 // --- Middleware ---
 app.use(cors());
@@ -30,12 +62,10 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // --- Routes ---
 
-// Health check
-app.get('/api/health', (_req, res) => {
+// Available handwriting fonts (for the frontend font picker)
+app.get('/api/fonts', (_req, res) => {
   res.json({
-    status: 'ok',
-    uptime: Math.round(process.uptime()),
-    timestamp: new Date().toISOString(),
+    fonts: HANDWRITING_FONTS.map((f) => ({ id: f.ID, name: f.FAMILY })),
   });
 });
 
@@ -43,7 +73,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/generate', generateLimiter, require('./routes/generate'));
 
 // --- Start ---
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`✦ Handwriting Folio server running on http://localhost:${PORT}`);
   console.log(`  Health check: http://localhost:${PORT}/api/health`);
 });

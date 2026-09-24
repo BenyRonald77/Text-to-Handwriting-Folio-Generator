@@ -1,6 +1,6 @@
 const express = require('express');
 const { generateHandwritingPages } = require('../render/folio');
-const { DEBUG } = require('../render/config');
+const { DEBUG, HANDWRITING_FONTS } = require('../render/config');
 
 const router = express.Router();
 
@@ -17,6 +17,7 @@ const JPEG_QUALITY = parseInt(process.env.JPEG_QUALITY, 10) || 92;
  * Body:
  *   {
  *     "text": "...",
+ *     "font": "random", // optional, HANDWRITING_FONTS id or "random" (default)
  *     "debug": false,  // optional, overrides to debug mode
  *     "count": 4       // optional debug variations count
  *   }
@@ -24,6 +25,7 @@ const JPEG_QUALITY = parseInt(process.env.JPEG_QUALITY, 10) || 92;
  * Response (Normal):
  *   {
  *     "isDebug": false,
+ *     "font": "kalam",
  *     "totalPages": N,
  *     "images": ["data:image/jpeg;base64,..."]
  *   }
@@ -34,8 +36,8 @@ const JPEG_QUALITY = parseInt(process.env.JPEG_QUALITY, 10) || 92;
  *     "totalPages": N,
  *     "variationsCount": 4,
  *     "variations": [
- *       { "variation": 1, "images": [...] },
- *       { "variation": 2, "images": [...] },
+ *       { "variation": 1, "font": "kalam", "images": [...] },
+ *       { "variation": 2, "font": "caveat", "images": [...] },
  *       ...
  *     ],
  *     "images": ["data:image/jpeg;base64,..."] // variation 1 for backward compat
@@ -43,7 +45,7 @@ const JPEG_QUALITY = parseInt(process.env.JPEG_QUALITY, 10) || 92;
  */
 router.post('/', (req, res) => {
   try {
-    const { text, debug: bodyDebug, count: bodyCount } = req.body || {};
+    const { text, font, debug: bodyDebug, count: bodyCount } = req.body || {};
 
     // --- Validation ---
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -55,6 +57,16 @@ router.post('/', (req, res) => {
     if (text.length > MAX_TEXT_LENGTH) {
       return res.status(400).json({
         error: `Teks melebihi batas maksimum ${MAX_TEXT_LENGTH} karakter.`,
+      });
+    }
+
+    if (
+      font !== undefined &&
+      font !== 'random' &&
+      !HANDWRITING_FONTS.some((f) => f.ID === font)
+    ) {
+      return res.status(400).json({
+        error: `Font tidak dikenal: ${String(font).slice(0, 50)}`,
       });
     }
 
@@ -80,14 +92,18 @@ router.post('/', (req, res) => {
 
       const variations = [];
       for (let v = 1; v <= variationsCount; v++) {
-        const buffers = generateHandwritingPages(cleanText, {
+        // With font 'random' each variation gets its own font — handy for
+        // comparing fonts side by side.
+        const result = generateHandwritingPages(cleanText, {
           jpegQuality: JPEG_QUALITY,
+          font,
         });
-        const images = buffers.map(
+        const images = result.buffers.map(
           (buf) => `data:image/jpeg;base64,${buf.toString('base64')}`
         );
         variations.push({
           variation: v,
+          font: result.font,
           images,
         });
       }
@@ -99,6 +115,7 @@ router.post('/', (req, res) => {
 
       return res.json({
         isDebug: true,
+        font: variations[0].font,
         totalPages: variations[0].images.length,
         variationsCount: variations.length,
         variations,
@@ -107,13 +124,14 @@ router.post('/', (req, res) => {
     }
 
     // --- Normal mode ---
-    const buffers = generateHandwritingPages(cleanText, {
+    const { font: usedFont, buffers } = generateHandwritingPages(cleanText, {
       jpegQuality: JPEG_QUALITY,
+      font,
     });
     const elapsed = Date.now() - t0;
 
     console.log(
-      `[generate] ${cleanText.length} chars → ${buffers.length} page(s) in ${elapsed}ms`
+      `[generate] ${cleanText.length} chars → ${buffers.length} page(s) [${usedFont}] in ${elapsed}ms`
     );
 
     const images = buffers.map(
@@ -122,6 +140,7 @@ router.post('/', (req, res) => {
 
     return res.json({
       isDebug: false,
+      font: usedFont,
       totalPages: images.length,
       images,
     });

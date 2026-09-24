@@ -1,5 +1,6 @@
 const path = require('path');
 const { GlobalFonts } = require('@napi-rs/canvas');
+const { HANDWRITING_FONTS } = require('./render/config');
 
 // Register handwriting fonts at startup.
 // @napi-rs/canvas uses GlobalFonts.registerFromPath() instead of
@@ -7,25 +8,22 @@ const { GlobalFonts } = require('@napi-rs/canvas');
 
 const FONTS_DIR = path.join(__dirname, 'assets', 'fonts');
 
-const fonts = [
-  { file: 'Kalam-Regular.ttf', family: 'Kalam', weight: 'normal' },
-  { file: 'Kalam-Bold.ttf',    family: 'Kalam', weight: 'bold' },
-];
-
-for (const font of fonts) {
-  const fontPath = path.join(FONTS_DIR, font.file);
-  GlobalFonts.registerFromPath(fontPath, font.family);
+for (const font of HANDWRITING_FONTS) {
+  for (const file of font.FILES) {
+    GlobalFonts.registerFromPath(path.join(FONTS_DIR, file), font.FAMILY);
+  }
 }
 
 // Verify registration
-const registered = GlobalFonts.families
-  .map(f => f.family)
-  .filter(f => fonts.some(def => def.family === f));
+const available = new Set(GlobalFonts.families.map((f) => f.family));
+const registered = HANDWRITING_FONTS.filter((f) => available.has(f.FAMILY));
+const missing = HANDWRITING_FONTS.filter((f) => !available.has(f.FAMILY));
 
 if (registered.length > 0) {
-  console.log(`  Fonts loaded: ${registered.join(', ')}`);
-} else {
-  console.error('  ⚠ No fonts were registered!');
+  console.log(`  Fonts loaded: ${registered.map((f) => f.FAMILY).join(', ')}`);
+}
+if (missing.length > 0) {
+  console.error(`  ⚠ Fonts failed to register: ${missing.map((f) => f.FAMILY).join(', ')}`);
 }
 
-module.exports = { fonts, FONTS_DIR };
+module.exports = { FONTS_DIR };

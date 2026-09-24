@@ -42,7 +42,7 @@ const FOLIO = Object.freeze({
   SIDU_X:          mm(8),
   SIDU_Y:          1928,
 
-  // Handwriting
+  // Handwriting — default font (see HANDWRITING_FONTS for the full set)
   FONT_FAMILY: 'Kalam',
   FONT_SIZE:   22,       // slightly smaller to fit tighter line spacing
   INK_COLOR:   '#13131f',
@@ -60,6 +60,32 @@ const LAYOUT = Object.freeze({
     (FOLIO.HEIGHT - FOLIO.MARGIN_BOTTOM - FOLIO.MARGIN_TOP) / FOLIO.LINE_SPACING
   ),
 });
+
+/**
+ * Handwriting fonts (PRD §8.2 — 2-3 fonts, randomised per generate).
+ *
+ * Each font has its own size because the fonts have very different
+ * x-heights: Caveat at 22px looks tiny next to Kalam at 22px. Tune SIZE
+ * so every font looks roughly the same size on the 36px ruled lines.
+ *
+ * FILES are loaded from src/assets/fonts/ by src/fonts.js.
+ */
+const HANDWRITING_FONTS = Object.freeze([
+  { ID: 'kalam',        FAMILY: 'Kalam',        SIZE: 22, FILES: ['Kalam-Regular.ttf', 'Kalam-Bold.ttf'] },
+  { ID: 'caveat',       FAMILY: 'Caveat',       SIZE: 28, FILES: ['Caveat-Variable.ttf'] },
+  { ID: 'patrick-hand', FAMILY: 'Patrick Hand', SIZE: 26, FILES: ['PatrickHand-Regular.ttf'] },
+  { ID: 'gochi-hand',   FAMILY: 'Gochi Hand',   SIZE: 24, FILES: ['GochiHand-Regular.ttf'] },
+]);
+
+/**
+ * Resolve a font id to its config entry.
+ * Unknown / missing id (or 'random') → a random font from the set.
+ */
+function resolveFont(id) {
+  const found = HANDWRITING_FONTS.find((f) => f.ID === id);
+  if (found) return found;
+  return HANDWRITING_FONTS[Math.floor(Math.random() * HANDWRITING_FONTS.length)];
+}
 
 /**
  * Per-character randomisation parameters (PRD §8.2).
@@ -139,5 +165,7 @@ const DEBUG = Object.freeze({
   VARIATIONS_COUNT: 4,   // how many side-by-side versions to generate
 });
 
-module.exports = { FOLIO, LAYOUT, JITTER, PAGE_NUMBER, DEBUG, mm };
+module.exports = {
+  FOLIO, LAYOUT, JITTER, PAGE_NUMBER, DEBUG, HANDWRITING_FONTS, resolveFont, mm,
+};
 

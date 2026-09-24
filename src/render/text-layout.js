@@ -13,12 +13,15 @@ const { FOLIO, LAYOUT } = require('./config');
  * Measure text width using a scratch canvas with the handwriting font.
  * We create one context for all measurements in a single run.
  *
+ * @param {{ FAMILY: string, SIZE: number }} [font] — defaults to FOLIO font
  * @returns {{ measureWord: (word: string) => number, measureChar: (ch: string) => number }}
  */
-function createMeasurer() {
+function createMeasurer(font) {
   const canvas = createCanvas(1, 1);
   const ctx = canvas.getContext('2d');
-  ctx.font = `${FOLIO.FONT_SIZE}px ${FOLIO.FONT_FAMILY}`;
+  const size = font ? font.SIZE : FOLIO.FONT_SIZE;
+  const family = font ? font.FAMILY : FOLIO.FONT_FAMILY;
+  ctx.font = `${size}px "${family}"`;
 
   return {
     measureWord(word) {
@@ -43,10 +46,11 @@ function createMeasurer() {
  *
  * @param {string} text — raw input text
  * @param {number} maxWidth — pixel width of the writing area
+ * @param {object} [font] — HANDWRITING_FONTS entry used for measuring
  * @returns {string[]} array of lines (one string per line)
  */
-function wrapText(text, maxWidth) {
-  const m = createMeasurer();
+function wrapText(text, maxWidth, font) {
+  const m = createMeasurer(font);
   const spaceW = m.measureSpace();
   const paragraphs = text.split('\n');
   const lines = [];
@@ -157,10 +161,11 @@ function paginateLines(lines, linesPerPage) {
  * Full text layout: wrap + paginate in one call.
  *
  * @param {string} text
+ * @param {object} [font] — HANDWRITING_FONTS entry used for measuring
  * @returns {string[][]} pages, each containing lines
  */
-function layoutText(text) {
-  const lines = wrapText(text, LAYOUT.WRITE_WIDTH);
+function layoutText(text, font) {
+  const lines = wrapText(text, LAYOUT.WRITE_WIDTH, font);
   return paginateLines(lines, LAYOUT.LINES_PER_PAGE);
 }
 
