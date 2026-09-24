@@ -9,6 +9,10 @@
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* Form controls don't inherit the page font by default (Safari/WebKit
+       falls back to a serif face on buttons) */
+    button, input, select, textarea { font-family: inherit; }
+
     :root {
       --bg: #FAF7F2;
       --surface: #FFFFFF;
@@ -115,6 +119,12 @@
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
+    }
+
+    .meta-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
 
     #char-count {
@@ -449,36 +459,47 @@
         gap: 12px;
       }
 
+      /* Plain stacked rows (no grid / `order`: iOS WebKit mis-sized the
+         grid version and the controls spilled out over the results).
+         Visual order comes from the HTML: font → count + Tab → debug. */
       .input-controls {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 10px 12px;
-        align-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
       }
 
-      /* Font picker gets its own full-width row
-         (.input-section prefix beats the generic `.input-section label` rule) */
-      .input-section .font-picker {
-        grid-column: 1 / -1;
-        order: -1;
+      /* .input-section prefix beats the generic `.input-section label` rule */
+      .input-section .font-picker,
+      .input-section .debug-toggle {
         display: flex;
+        align-items: center;
         margin-bottom: 0;
       }
+
       .font-picker select {
         flex: 1;
+        min-width: 0;
         min-height: 44px;
         font-size: 16px;
-        padding: 6px 10px;
+        padding: 6px 34px 6px 10px;
+        background-color: var(--surface);
+        /* iOS draws no arrow on a styled select — add one */
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238A857C' stroke-width='1.6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+      }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
       }
 
       #btn-insert-tab { min-height: 36px; padding: 4px 14px; }
 
-      .input-section .debug-toggle {
-        grid-column: 1 / -1;
-        display: flex;
-        min-height: 32px;
-        margin-bottom: 0;
-      }
+      .input-section .debug-toggle { min-height: 32px; }
       .debug-toggle input { width: 18px; height: 18px; }
 
       #btn-generate {
@@ -536,8 +557,10 @@
       ></textarea>
       <div class="input-footer">
         <div class="input-controls">
-          <span id="char-count">0 / 10.000</span>
-          <button id="btn-insert-tab" type="button" title="Sisipkan tab untuk meratakan teks, misal: Nama ⇥ : …">⇥ Tab</button>
+          <div class="meta-row">
+            <span id="char-count">0 / 10.000</span>
+            <button id="btn-insert-tab" type="button" title="Sisipkan tab untuk meratakan teks, misal: Nama ⇥ : …">⇥ Tab</button>
+          </div>
           <label class="font-picker">
             <span>Font</span>
             <select id="font-select">
