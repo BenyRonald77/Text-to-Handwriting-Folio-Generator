@@ -76,6 +76,7 @@
     }
 
     #text-input {
+      tab-size: 8;
       width: 100%;
       min-height: 180px;
       padding: 14px;
@@ -527,7 +528,8 @@
 
     // ── Generate ──
     btnGenerate.addEventListener('click', async () => {
-      const text = textarea.value.trim();
+      // Don't trim the start: leading spaces are indentation
+      const text = textarea.value.replace(/\s+$/, '');
 
       // Client-side validation
       if (!text) {
@@ -719,8 +721,20 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         btnGenerate.click();
+        return;
       }
+      // Tab inserts a tab character (used for aligning "Nama<Tab>: ...")
+      // instead of moving focus. Esc then Tab still leaves the textarea.
+      if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !tabEscaped) {
+        e.preventDefault();
+        if (!document.execCommand('insertText', false, '\t')) {
+          textarea.setRangeText('\t', textarea.selectionStart, textarea.selectionEnd, 'end');
+          textarea.dispatchEvent(new Event('input'));
+        }
+      }
+      tabEscaped = e.key === 'Escape';
     });
+    let tabEscaped = false;
 
     // Arrow keys to navigate variations in debug mode
     window.addEventListener('keydown', (e) => {

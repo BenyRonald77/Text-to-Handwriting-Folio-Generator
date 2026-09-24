@@ -25,12 +25,13 @@ const deg2rad = (d) => d * Math.PI / 180;
 /**
  * Render a single line of handwritten text on a canvas.
  *
- * The line's baseline sits at (startX, baselineY). Each character
- * receives independent random transforms so no two renders look
- * the same.
+ * The line's baseline sits at baselineY. Each word starts at the x
+ * position the layout gave it (so indentation / tab alignment is exact);
+ * within a word every character gets independent random transforms so
+ * no two renders look the same.
  *
  * @param {CanvasRenderingContext2D} ctx
- * @param {string} line — one line of text (already word-wrapped)
+ * @param {{ segments: { x: number, text: string }[] }} line — from layoutText()
  * @param {number} startX — left edge of writing area (px)
  * @param {number} baselineY — Y of the ruled line this text sits on
  * @param {object} [opts]
@@ -38,7 +39,7 @@ const deg2rad = (d) => d * Math.PI / 180;
  * @param {string} [opts.fontFamily] — override font family
  */
 function renderHandwrittenLine(ctx, line, startX, baselineY, opts = {}) {
-  if (!line || line.length === 0) return;
+  if (!line || line.segments.length === 0) return;
 
   const fontSize = opts.fontSize || FOLIO.FONT_SIZE;
   const fontFamily = opts.fontFamily || FOLIO.FONT_FAMILY;
@@ -52,47 +53,45 @@ function renderHandwrittenLine(ctx, line, startX, baselineY, opts = {}) {
   ctx.font = `${fontSize}px "${fontFamily}"`;
   ctx.textBaseline = 'alphabetic';
 
-  let cursorX = startX;
+  for (const seg of line.segments) {
+    // Word start: exact layout position + a tiny random nudge
+    let cursorX = startX + seg.x + jit(JITTER.SPACING_PX);
 
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+    for (const ch of seg.text) {
+      // Measure the character's natural width at base font size
+      const charWidth = ctx.measureText(ch).width;
 
-    // Measure the character's natural width at base font size
-    const charWidth = ctx.measureText(ch).width;
+      // ── Per-character random transforms ──
+      const angle    = deg2rad(jit(JITTER.ROTATION_DEG));
+      const yOffset  = jit(JITTER.BASELINE_PX);
+      const xJitter  = jit(JITTER.SPACING_PX);
+      const scale    = 1 + jit(JITTER.SCALE_FRACTION);
+      const alpha    = rand(JITTER.OPACITY_MIN, JITTER.OPACITY_MAX);
 
-    // ── Per-character random transforms ──
-    const angle    = deg2rad(jit(JITTER.ROTATION_DEG));
-    const yOffset  = jit(JITTER.BASELINE_PX);
-    const xJitter  = jit(JITTER.SPACING_PX);
-    const scale    = 1 + jit(JITTER.SCALE_FRACTION);
-    const alpha    = rand(JITTER.OPACITY_MIN, JITTER.OPACITY_MAX);
+      // Position for this character (with line-level drift applied)
+      const charX = cursorX + xJitter;
+      const charY = baselineY + lineYShift + yOffset
+                    + Math.sin(lineTilt) * (cursorX - startX); // tilt effect
 
-    // Position for this character (with line-level drift applied)
-    const charX = cursorX + xJitter;
-    const charY = baselineY + lineYShift + yOffset
-                  + Math.sin(lineTilt) * (cursorX - startX); // tilt effect
+      ctx.save();
 
-    ctx.save();
+      // Move origin to character position, apply rotation & scale
+      ctx.translate(charX, charY);
+      ctx.rotate(angle);
+      ctx.scale(scale, scale);
 
-    // Move origin to character position, apply rotation & scale
-    ctx.translate(charX, charY);
-    ctx.rotate(angle);
-    ctx.scale(scale, scale);
+      // Ink colour + pen pressure opacity
+      ctx.fillStyle = FOLIO.INK_COLOR;
+      ctx.globalAlpha = alpha;
 
-    // Ink colour + pen pressure opacity
-    ctx.fillStyle = FOLIO.INK_COLOR;
-    ctx.globalAlpha = alpha;
+      // Draw character at the transformed origin
+      ctx.fillText(ch, 0, 0);
 
-    // Reset font in case scale changed effective size
-    ctx.font = `${fontSize}px "${fontFamily}"`;
+      ctx.restore();
 
-    // Draw character at the transformed origin
-    ctx.fillText(ch, 0, 0);
-
-    ctx.restore();
-
-    // Advance cursor (base width + small random gap)
-    cursorX += charWidth + jit(JITTER.SPACING_PX);
+      // Advance cursor (base width + small random gap)
+      cursorX += charWidth + jit(JITTER.SPACING_PX);
+    }
   }
 }
 
@@ -100,7 +99,7 @@ function renderHandwrittenLine(ctx, line, startX, baselineY, opts = {}) {
  * Render all lines of a page onto an already-prepared canvas context.
  *
  * @param {CanvasRenderingContext2D} ctx
- * @param {string[]} lines — the lines for this page
+ * @param {object[]} lines — the lines for this page (from layoutText())
  * @param {number[]} lineYs — Y positions of each ruled line on the page
  * @param {object} [opts]
  */
@@ -108,7 +107,6 @@ function renderPageText(ctx, lines, lineYs, opts = {}) {
   const startX = opts.startX || FOLIO.WRITE_X;
 
   for (let i = 0; i < lines.length && i < lineYs.length; i++) {
-    if (lines[i].length === 0) continue; // blank line — just skip
     renderHandwrittenLine(ctx, lines[i], startX, lineYs[i], opts);
   }
 }

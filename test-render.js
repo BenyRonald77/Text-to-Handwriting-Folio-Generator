@@ -36,6 +36,24 @@ Setiap siswa memiliki gaya belajar yang berbeda-beda. Ada yang lebih mudah memah
 
 Selain pendidikan formal, pendidikan karakter juga tidak kalah pentingnya. Nilai-nilai seperti kejujuran, kerja keras, dan tanggung jawab perlu ditanamkan sejak dini agar generasi muda memiliki fondasi moral yang kuat.`;
 
+// Assignment-style text: tab alignment, centred title, indents, lists
+const FORMAT_TEXT = `Nama\t\t: Dzaky Surya Priyangga
+NIM / Kls\t: 141260376 / EM - H
+
+                    Perencanaan Efektif, Strategis, dan Pemecahan Masalah
+
+1. Perencanaan yg Efektif
+  A. Pengertian Perencanaan
+        Perencanaan merupakan proses menetapkan tujuan organisasi, menentukan strategi untuk mencapai tujuan, serta mengembangkan rencana untuk mengatur dan mengoordinasikan kegiatan organisasi. Perencanaan dapat dilakukan secara informal maupun formal.
+        Perencanaan merupakan bagian penting dalam manajemen karena organisasi perlu tahu apa yg ingin dicapai dan bagaimana cara mencapainya.
+
+  B. Tujuan dan manfaat perencanaan
+      Perencanaan memiliki empat tujuan utama:
+    1) Memberikan arah. Dengan adanya rencana, manajer dan karyawan mengetahui apa yang harus dicapai serta kontribusi yg harus diberikan.
+    2) Mengurangi ketidakpastian (uncertainty). Mendorong manajer untuk melihat ke depan, memperkirakan perubahan, dan memperhitungkan dampaknya.
+    3) Meminimalkan pemborosan dan kegiatan yang berlebihan.
+    4) Menetapkan tujuan atau standar untuk pengendalian.`;
+
 const LONG_TEXT = `Teknologi informasi dan komunikasi telah mengubah cara manusia berinteraksi dan bekerja. Internet, yang mulanya hanya digunakan oleh kalangan akademisi dan militer, kini telah menjadi bagian tak terpisahkan dari kehidupan sehari-hari masyarakat di seluruh dunia.
 
 Perkembangan smartphone dan perangkat mobile lainnya semakin mempercepat adopsi teknologi digital. Dengan hanya bermodalkan telepon genggam, seseorang dapat mengakses informasi, berkomunikasi dengan orang di belahan dunia lain, melakukan transaksi keuangan, hingga belajar keterampilan baru melalui platform daring.
@@ -85,6 +103,7 @@ function runNormal() {
     { name: 'short',  text: SHORT_TEXT },
     { name: 'medium', text: MEDIUM_TEXT },
     { name: 'long',   text: LONG_TEXT },
+    { name: 'format', text: FORMAT_TEXT },
   ];
 
   for (const test of tests) {

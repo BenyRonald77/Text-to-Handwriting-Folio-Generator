@@ -71,6 +71,12 @@ const FOLIO = Object.freeze({
   WRITE_X:       mm(10),     // ~10mm left padding
   WRITE_END_X:   mm(215) - mm(10), // ~10mm right padding
 
+  // Whitespace (text-layout.js). Fixed widths — the same for every font —
+  // so indentation typed in the textarea looks the same whatever font is
+  // picked. Ratio to the writing width roughly matches the web textarea.
+  SPACE_WIDTH: 9,        // px per space character
+  TAB_WIDTH:   72,       // px between tab stops (= 8 spaces)
+
   // Handwriting — default font (see HANDWRITING_FONTS for the full set)
   FONT_FAMILY: 'Kalam',
   FONT_SIZE:   26,
@@ -100,6 +106,18 @@ const HANDWRITING_FONTS = Object.freeze([
   { ID: 'caveat',       FAMILY: 'Caveat',       SIZE: 33, FILES: ['Caveat-Variable.ttf'] },
   { ID: 'patrick-hand', FAMILY: 'Patrick Hand', SIZE: 31, FILES: ['PatrickHand-Regular.ttf'] },
   { ID: 'gochi-hand',   FAMILY: 'Gochi Hand',   SIZE: 28, FILES: ['GochiHand-Regular.ttf'] },
+  { ID: 'handlee',               FAMILY: 'Handlee',               SIZE: 26, FILES: ['Handlee-Regular.ttf'] },
+  { ID: 'indie-flower',          FAMILY: 'Indie Flower',          SIZE: 27, FILES: ['IndieFlower-Regular.ttf'] },
+  { ID: 'shadows-into-light',    FAMILY: 'Shadows Into Light',    SIZE: 28, FILES: ['ShadowsIntoLight.ttf'] },
+  { ID: 'architects-daughter',   FAMILY: 'Architects Daughter',   SIZE: 25, FILES: ['ArchitectsDaughter-Regular.ttf'] },
+  { ID: 'reenie-beanie',         FAMILY: 'Reenie Beanie',         SIZE: 34, FILES: ['ReenieBeanie.ttf'] },
+  { ID: 'nothing-you-could-do',  FAMILY: 'Nothing You Could Do',  SIZE: 27, FILES: ['NothingYouCouldDo.ttf'] },
+  { ID: 'homemade-apple',        FAMILY: 'Homemade Apple',        SIZE: 22, FILES: ['HomemadeApple-Regular.ttf'] },
+  { ID: 'covered-by-your-grace', FAMILY: 'Covered By Your Grace', SIZE: 30, FILES: ['CoveredByYourGrace.ttf'] },
+  { ID: 'just-another-hand',     FAMILY: 'Just Another Hand',     SIZE: 35, FILES: ['JustAnotherHand-Regular.ttf'] },
+  { ID: 'sue-ellen-francisco',   FAMILY: 'Sue Ellen Francisco',   SIZE: 30, FILES: ['SueEllenFrancisco-Regular.ttf'] },
+  { ID: 'zeyada',                FAMILY: 'Zeyada',                SIZE: 31, FILES: ['Zeyada.ttf'] },
+  { ID: 'dawning-of-a-new-day',  FAMILY: 'Dawning of a New Day',  SIZE: 35, FILES: ['DawningofaNewDay.ttf'] },
 ]);
 
 /**

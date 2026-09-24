@@ -81,7 +81,12 @@ router.post('/', (req, res) => {
       DEBUG.ENABLED;
 
     const t0 = Date.now();
-    const cleanText = text.trim();
+    // Keep leading spaces/tabs (indentation is meaningful); only normalise
+    // line endings and drop blank lines at the start and whitespace at the end.
+    const cleanText = text
+      .replace(/\r\n?/g, '\n')
+      .replace(/^(?:[ \t]*\n)+/, '')
+      .replace(/\s+$/, '');
 
     if (isDebug) {
       const rawCount = parseInt(req.query.count || bodyCount, 10);
