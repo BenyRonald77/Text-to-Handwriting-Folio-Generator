@@ -372,6 +372,7 @@
 
     .page-card img {
       width: 100%;
+      height: auto;
       display: block;
       border-bottom: 1px solid var(--border);
     }
@@ -404,15 +405,118 @@
       color: var(--accent);
     }
 
+    /* "Tab" button — phones have no Tab key; shown on touch devices only */
+    #btn-insert-tab {
+      display: none;
+      padding: 2px 10px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    @media (pointer: coarse) {
+      #btn-insert-tab { display: inline-block; }
+    }
+
     /* ── Responsive ── */
-    @media (max-width: 540px) {
-      .app { padding: 24px 16px 40px; }
+    @media (max-width: 640px) {
+      .app {
+        padding: 20px 14px 40px;
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
+        padding-bottom: max(40px, env(safe-area-inset-bottom));
+      }
+      header { margin-bottom: 20px; }
       header h1 { font-size: 1.15rem; }
-      #text-input { min-height: 140px; font-size: 0.9rem; }
-      .input-footer { flex-direction: column; gap: 12px; align-items: stretch; }
-      #btn-generate { text-align: center; }
-      .results-header { flex-direction: column; gap: 10px; }
-      .results-actions { width: 100%; justify-content: flex-start; }
+      header p { font-size: 0.85rem; }
+
+      .input-section { padding: 14px; }
+
+      /* ≥16px stops iOS Safari from zooming in when the field is focused */
+      #text-input {
+        min-height: 200px;
+        font-size: 16px;
+        padding: 12px;
+      }
+
+      .input-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .input-controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px 12px;
+        align-items: center;
+      }
+
+      /* Font picker gets its own full-width row
+         (.input-section prefix beats the generic `.input-section label` rule) */
+      .input-section .font-picker {
+        grid-column: 1 / -1;
+        order: -1;
+        display: flex;
+        margin-bottom: 0;
+      }
+      .font-picker select {
+        flex: 1;
+        min-height: 44px;
+        font-size: 16px;
+        padding: 6px 10px;
+      }
+
+      #btn-insert-tab { min-height: 36px; padding: 4px 14px; }
+
+      .input-section .debug-toggle {
+        grid-column: 1 / -1;
+        display: flex;
+        min-height: 32px;
+        margin-bottom: 0;
+      }
+      .debug-toggle input { width: 18px; height: 18px; }
+
+      #btn-generate {
+        width: 100%;
+        min-height: 48px;
+        font-size: 1rem;
+      }
+
+      #loading { padding: 28px 0; }
+
+      #results { margin-top: 22px; }
+      .results-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .results-actions { flex-direction: column; align-items: stretch; }
+      .btn-action,
+      .btn-secondary {
+        min-height: 44px;
+        font-size: 0.9rem;
+      }
+
+      /* Variation tabs scroll sideways instead of wrapping into a wall */
+      .variation-bar { padding: 8px 10px; }
+      .variation-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .variation-tabs::-webkit-scrollbar { display: none; }
+      .tab-btn { flex-shrink: 0; min-height: 38px; white-space: nowrap; }
+
+      .page-card { margin-bottom: 14px; }
+      .page-card-footer { padding: 8px 12px; }
+      .btn-download-page {
+        min-height: 40px;
+        padding: 6px 16px;
+        font-size: 0.85rem;
+      }
     }
   </style>
 </head>
@@ -433,6 +537,7 @@
       <div class="input-footer">
         <div class="input-controls">
           <span id="char-count">0 / 10.000</span>
+          <button id="btn-insert-tab" type="button" title="Sisipkan tab untuk meratakan teks, misal: Nama ⇥ : …">⇥ Tab</button>
           <label class="font-picker">
             <span>Font</span>
             <select id="font-select">
@@ -565,7 +670,11 @@
           throw new Error(data.error || `Server error (${res.status})`);
         }
 
+        // Hide the spinner first so the scroll target doesn't shift afterwards
+        hideLoading();
         handleResponse(data);
+        // On phones the results start below the fold — bring them into view
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (err) {
         showError(err.message || 'Gagal terhubung ke server.');
       } finally {
@@ -639,6 +748,10 @@
         img.src = src;
         img.alt = `Halaman ${i + 1}`;
         img.loading = 'lazy';
+        // Reserve the F4 page ratio up front so the layout doesn't jump while
+        // images decode (that also broke the smooth scroll to the results)
+        img.width = 1270;
+        img.height = 1949;
 
         const footer = document.createElement('div');
         footer.className = 'page-card-footer';
@@ -663,36 +776,85 @@
     }
 
     // ── Download helpers ──
-    function downloadImage(dataUrl, filename) {
+
+    // On phones, several downloads in a row get blocked and iOS just opens a
+    // preview. The share sheet ("Simpan Gambar" / save to gallery) handles all
+    // pages at once, so touch devices use it when the browser supports files.
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+    /** data:image/jpeg;base64,… → File (synchronous, so the tap still counts
+     *  as a user gesture when navigator.share() is called right after). */
+    function dataUrlToFile(dataUrl, filename) {
+      const [head, b64] = dataUrl.split(',');
+      const mime = head.match(/data:([^;]+)/)[1];
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new File([bytes], filename, { type: mime });
+    }
+
+    function canShareFiles(files) {
+      return isTouch && navigator.canShare && navigator.canShare({ files });
+    }
+
+    function triggerDownload(file) {
+      const url = URL.createObjectURL(file);
       const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = filename;
+      a.href = url;
+      a.download = file.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+
+    /** Save one or more pages: share sheet on phones, normal downloads elsewhere. */
+    async function saveImages(items) {
+      const files = items.map(({ src, filename }) => dataUrlToFile(src, filename));
+
+      if (canShareFiles(files)) {
+        try {
+          await navigator.share({ files });
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return; // user closed the sheet
+          // otherwise fall through to regular downloads
+        }
+      }
+
+      files.forEach((file, i) => setTimeout(() => triggerDownload(file), i * 300));
+    }
+
+    function downloadImage(dataUrl, filename) {
+      saveImages([{ src: dataUrl, filename }]);
     }
 
     // Download current active variation
     btnDownloadAll.addEventListener('click', () => {
       const varPrefix = currentVariations.length > 1 ? `-v${activeVariationIndex + 1}` : '';
-      activeImages.forEach((src, i) => {
-        setTimeout(() => {
-          downloadImage(src, `folio${varPrefix}-halaman-${i + 1}.jpg`);
-        }, i * 300);
-      });
+      saveImages(activeImages.map((src, i) => ({
+        src,
+        filename: `folio${varPrefix}-halaman-${i + 1}.jpg`,
+      })));
     });
 
     // Download all variations (debug mode)
     btnDownloadAllVariations.addEventListener('click', () => {
-      let delay = 0;
-      currentVariations.forEach((v, vIdx) => {
-        v.images.forEach((src, pIdx) => {
-          setTimeout(() => {
-            downloadImage(src, `folio-v${vIdx + 1}-halaman-${pIdx + 1}.jpg`);
-          }, delay);
-          delay += 300;
-        });
-      });
+      saveImages(currentVariations.flatMap((v, vIdx) =>
+        v.images.map((src, pIdx) => ({
+          src,
+          filename: `folio-v${vIdx + 1}-halaman-${pIdx + 1}.jpg`,
+        }))
+      ));
+    });
+
+    // Phones have no Tab key — this button inserts one at the cursor
+    document.getElementById('btn-insert-tab').addEventListener('click', () => {
+      textarea.focus();
+      if (!document.execCommand('insertText', false, '\t')) {
+        textarea.setRangeText('\t', textarea.selectionStart, textarea.selectionEnd, 'end');
+        textarea.dispatchEvent(new Event('input'));
+      }
     });
 
     // ── UI state helpers ──
