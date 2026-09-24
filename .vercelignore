@@ -1,0 +1,12 @@
+# Not needed at runtime — keep the Vercel upload small.
+output-test/
+deploy/
+logs/
+*.pdf
+Folio 1.png
+folio 2.jpg
+Kertas Folio Asli.jpeg
+test-render.js
+ecosystem.config.js
+PRD-Text-to-Handwriting-Folio.md
+.agents/

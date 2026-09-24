@@ -664,7 +664,8 @@
           body: JSON.stringify({ text, font: fontSelect.value, debug: isDebug }),
         });
 
-        const data = await res.json();
+        // Platform errors (e.g. a Vercel timeout page) aren't JSON
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
           throw new Error(data.error || `Server error (${res.status})`);

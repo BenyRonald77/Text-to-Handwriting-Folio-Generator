@@ -7,6 +7,24 @@ const router = express.Router();
 const MAX_TEXT_LENGTH = parseInt(process.env.MAX_TEXT_LENGTH, 10) || 10000;
 const JPEG_QUALITY = parseInt(process.env.JPEG_QUALITY, 10) || 92;
 
+// Vercel functions can't return more than 4.5 MB; past that the client gets
+// a non-JSON platform error. Check the size first and answer with a clear
+// message instead. 0 = no limit (VPS).
+const MAX_RESPONSE_BYTES =
+  parseInt(process.env.MAX_RESPONSE_BYTES, 10) || (process.env.VERCEL ? 4_200_000 : 0);
+
+function sendImages(res, payload) {
+  const body = JSON.stringify(payload);
+  if (MAX_RESPONSE_BYTES && Buffer.byteLength(body) > MAX_RESPONSE_BYTES) {
+    return res.status(413).json({
+      error: payload.isDebug
+        ? 'Hasil mode debug terlalu besar. Matikan mode debug atau perpendek teks.'
+        : 'Hasil terlalu besar. Coba perpendek teks atau bagi menjadi beberapa kali generate.',
+    });
+  }
+  return res.type('application/json').send(body);
+}
+
 /**
  * POST /api/generate
  *
@@ -118,7 +136,7 @@ router.post('/', (req, res) => {
         `[generate:debug] ${cleanText.length} chars → ${variationsCount} variations (${variations[0].images.length} pages each) in ${elapsed}ms`
       );
 
-      return res.json({
+      return sendImages(res, {
         isDebug: true,
         font: variations[0].font,
         totalPages: variations[0].images.length,
@@ -143,7 +161,7 @@ router.post('/', (req, res) => {
       (buf) => `data:image/jpeg;base64,${buf.toString('base64')}`
     );
 
-    return res.json({
+    return sendImages(res, {
       isDebug: false,
       font: usedFont,
       totalPages: images.length,
